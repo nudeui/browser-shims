@@ -1,30 +1,26 @@
 import { state } from "./_shared.js";
 import { Element } from "./Element.js";
 
-if (!globalThis.HTMLElement) {
-	class HTMLElement extends Element {
-		static _tag = null;
-		static _def = null;
+export default globalThis.HTMLElement ??= class HTMLElement extends Element {
+	static _tag = null;
+	static _def = null;
 
-		constructor (tag) {
-			if (state._upgrade) {
-				super(state._upgrade.localName);
-				return state._upgrade;
-			}
-
-			super(tag ?? HTMLElement._tag);
-
-			if (HTMLElement._def) {
-				Element._setDef(this, HTMLElement._def);
-			}
+	constructor (tag) {
+		if (state._upgrade) {
+			super(state._upgrade.localName);
+			return state._upgrade;
 		}
 
-		attachShadow (opts = {}) {
-			return { mode: opts.mode, adoptedStyleSheets: [] };
+		super(tag ?? HTMLElement._tag);
+
+		if (HTMLElement._def) {
+			Element._setDef(this, HTMLElement._def);
 		}
 	}
 
-	globalThis.HTMLElement = HTMLElement;
-}
+	attachShadow (opts = {}) {
+		return { mode: opts.mode, adoptedStyleSheets: [] };
+	}
+};
 
 export let { HTMLElement } = globalThis;

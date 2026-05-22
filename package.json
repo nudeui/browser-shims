@@ -1,3 +1,50 @@
 {
-  "name": "browser-shims"
+	"name": "browser-shims",
+	"version": "0.0.0",
+	"description": "Functional stubs for DOM objects needed for web component testing, using all built-in objects the environment has rather than replacing them",
+	"type": "module",
+	"scripts": {
+		"release": "npm login && npx release-it"
+	},
+	"exports": {
+		".": "./src/index.js",
+		"./Text": "./src/Text.js",
+		"./Node": "./src/Node.js",
+		"./Element": "./src/Element.js",
+		"./HTMLElement": "./src/HTMLElement.js",
+		"./MutationObserver": "./src/MutationObserver.js",
+		"./CSSStyleSheet": "./src/CSSStyleSheet.js",
+		"./CustomElementRegistry": "./src/CustomElementRegistry.js",
+		"./Document": "./src/Document.js"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/nudeui/browser-shims.git"
+	},
+	"keywords": [
+		"DOM",
+		"polyfill",
+		"shim",
+		"Web Components",
+		"testing"
+	],
+	"contributors": [
+		"Lea Verou",
+		"Dmitry Sharabin"
+	],
+	"license": "MIT",
+	"bugs": {
+		"url": "https://github.com/nudeui/browser-shims/issues"
+	},
+	"homepage": "https://github.com/nudeui/browser-shims#readme",
+	"dependencies": {
+		"parse5": "^8.0.1"
+	},
+	"devDependencies": {
+		"prettier": "^3.8.3",
+		"prettier-plugin-brace-style": "^0.10.1",
+		"prettier-plugin-merge": "^0.10.1",
+		"prettier-plugin-space-before-function-paren": "^0.1.0",
+		"release-it": "^20.0.1"
+	}
 }

@@ -1,4 +1,4 @@
-import { state } from "./_shared.js";
+import { state } from "./state.js";
 import { Text } from "./Text.js";
 
 if (!globalThis.Node) {

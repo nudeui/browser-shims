@@ -1,4 +1,4 @@
-import { state } from "./_shared.js";
+import { state } from "./state.js";
 import { Element } from "./Element.js";
 
 export default globalThis.HTMLElement ??= class HTMLElement extends Element {

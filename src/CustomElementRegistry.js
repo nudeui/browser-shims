@@ -1,4 +1,5 @@
-import { state, walk } from "./_shared.js";
+import { state } from "./state.js";
+import { walk } from "./util.js";
 import { Element } from "./Element.js";
 
 if (!globalThis.customElements) {

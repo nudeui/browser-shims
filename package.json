@@ -1,6 +1,6 @@
 {
 	"name": "browser-shims",
-	"version": "0.0.0",
+	"version": "0.0.1",
 	"description": "Functional stubs for DOM objects needed for web component testing, using all built-in objects the environment has rather than replacing them",
 	"type": "module",
 	"scripts": {

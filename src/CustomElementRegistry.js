@@ -2,94 +2,91 @@ import { state } from "./state.js";
 import { walk } from "./util.js";
 import { Element } from "./Element.js";
 
-if (!globalThis.customElements) {
-	class CustomElementRegistry {
-		#defs = new Map();
-		#pending = new Map();
+function upgrade (el, def) {
+	Object.setPrototypeOf(el, def.Cls.prototype);
+	Element._setDef(el, def);
 
-		define (name, Cls) {
-			if (!name.includes("-")) {
-				throw new DOMException(`"${name}" is not a valid custom element name`);
-			}
+	let reactions = [];
 
-			if (this.#defs.has(name)) {
-				throw new DOMException(`"${name}" has already been defined`);
-			}
+	for (let attr of el.attributes) {
+		if (def.observedAttrs.includes(attr.name)) {
+			reactions.push(() => el.attributeChangedCallback?.(attr.name, null, attr.value));
+		}
+	}
 
-			let def = {
-				name,
-				Cls,
-				observedAttrs: Cls.observedAttributes ?? [],
-			};
+	if (el.isConnected) {
+		reactions.push(() => el.connectedCallback?.());
+	}
 
-			this.#defs.set(name, def);
+	state._upgrade = el;
+	new def.Cls();
+	state._upgrade = null;
 
-			if (state.doc?.body) {
-				walk(state.doc.body, n => {
-					if (n instanceof Element && n.localName === name && !(n instanceof Cls)) {
-						upgrade(n, def);
-					}
-				});
-			}
+	for (let fn of reactions) {
+		fn();
+	}
+}
 
-			if (this.#pending.has(name)) {
-				for (let resolve of this.#pending.get(name)) {
-					resolve(Cls);
+export default globalThis.CustomElementRegistry ??= class CustomElementRegistry {
+	#defs = new Map();
+	#pending = new Map();
+
+	define (name, Cls) {
+		if (!name.includes("-")) {
+			throw new DOMException(`"${name}" is not a valid custom element name`);
+		}
+
+		if (this.#defs.has(name)) {
+			throw new DOMException(`"${name}" has already been defined`);
+		}
+
+		let def = {
+			name,
+			Cls,
+			observedAttrs: Cls.observedAttributes ?? [],
+		};
+
+		this.#defs.set(name, def);
+
+		if (state.doc?.body) {
+			walk(state.doc.body, n => {
+				if (n instanceof Element && n.localName === name && !(n instanceof Cls)) {
+					upgrade(n, def);
 				}
-				this.#pending.delete(name);
-			}
-		}
-
-		get (name) {
-			return this.#defs.get(name)?.Cls;
-		}
-
-		getDef (name) {
-			return this.#defs.get(name) ?? null;
-		}
-
-		whenDefined (name) {
-			let d = this.#defs.get(name);
-			if (d) {
-				return Promise.resolve(d.Cls);
-			}
-
-			return new Promise(resolve => {
-				if (!this.#pending.has(name)) {
-					this.#pending.set(name, []);
-				}
-				this.#pending.get(name).push(resolve);
 			});
 		}
-	}
 
-	function upgrade (el, def) {
-		Object.setPrototypeOf(el, def.Cls.prototype);
-		Element._setDef(el, def);
-
-		let reactions = [];
-
-		for (let attr of el.attributes) {
-			if (def.observedAttrs.includes(attr.name)) {
-				reactions.push(() => el.attributeChangedCallback?.(attr.name, null, attr.value));
+		if (this.#pending.has(name)) {
+			for (let resolve of this.#pending.get(name)) {
+				resolve(Cls);
 			}
-		}
-
-		if (el.isConnected) {
-			reactions.push(() => el.connectedCallback?.());
-		}
-
-		state._upgrade = el;
-		new def.Cls();
-		state._upgrade = null;
-
-		for (let fn of reactions) {
-			fn();
+			this.#pending.delete(name);
 		}
 	}
 
-	globalThis.CustomElementRegistry = CustomElementRegistry;
-	globalThis.customElements = new CustomElementRegistry();
-}
+	get (name) {
+		return this.#defs.get(name)?.Cls;
+	}
+
+	getDef (name) {
+		return this.#defs.get(name) ?? null;
+	}
+
+	whenDefined (name) {
+		let d = this.#defs.get(name);
+		if (d) {
+			return Promise.resolve(d.Cls);
+		}
+
+		return new Promise(resolve => {
+			if (!this.#pending.has(name)) {
+				this.#pending.set(name, []);
+			}
+			this.#pending.get(name).push(resolve);
+		});
+	}
+};
+
+globalThis.customElements ??= new globalThis.CustomElementRegistry();
 
 export let { CustomElementRegistry, customElements } = globalThis;

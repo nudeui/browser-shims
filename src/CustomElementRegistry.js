@@ -19,8 +19,13 @@ function upgrade (el, def) {
 	}
 
 	state._upgrade = el;
-	new def.Cls();
-	state._upgrade = null;
+	try {
+		new def.Cls();
+	}
+	finally {
+		// A constructor that throws before super() must not leave the flag set
+		state._upgrade = null;
+	}
 
 	for (let fn of reactions) {
 		fn();
@@ -62,6 +67,15 @@ export default (globalThis.CustomElementRegistry ??= class CustomElementRegistry
 			}
 			this.#pending.delete(name);
 		}
+	}
+
+	upgrade (root) {
+		walk(root, n => {
+			let def = n instanceof Element && this.#defs.get(n.localName);
+			if (def && !(n instanceof def.Cls)) {
+				upgrade(n, def);
+			}
+		});
 	}
 
 	get (name) {

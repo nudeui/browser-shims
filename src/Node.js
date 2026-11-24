@@ -11,11 +11,7 @@ export default (globalThis.Node ??= class Node extends EventTarget {
 	}
 
 	get isConnected () {
-		let n = this;
-		while (n.parentNode) {
-			n = n.parentNode;
-		}
-		return n === state.doc;
+		return this.parentNode ? this.parentNode.isConnected : this === state.doc;
 	}
 
 	get firstChild () {
@@ -32,11 +28,12 @@ export default (globalThis.Node ??= class Node extends EventTarget {
 
 	set textContent (val) {
 		while (this._children.length) {
-			this._children.at(-1).remove();
+			this._children[0].remove();
 		}
 
 		if (val !== "" && val != null) {
-			this._children.push(new Text(val));
+			// Not this.append(), which a component may override
+			Node.prototype.append.call(this, String(val));
 		}
 	}
 

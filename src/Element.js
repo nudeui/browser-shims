@@ -1,35 +1,11 @@
-import { state } from "./state.js";
-import { Text } from "./Text.js";
 import { Node } from "./Node.js";
-
-let parseFragment;
-if (!globalThis.Element) {
-	({ parseFragment } = await import("parse5"));
-}
-
-function toNode (ast) {
-	if (ast.nodeName === "#text") {
-		return new Text(ast.value);
-	}
-
-	let el = state.doc.createElement(ast.tagName);
-
-	for (let attr of ast.attrs ?? []) {
-		el.setAttribute(attr.name, attr.value);
-	}
-
-	for (let child of ast.childNodes ?? []) {
-		let node = toNode(child);
-		node.parentNode = el;
-		el.childNodes.push(node);
-	}
-
-	return el;
-}
+import { ShadowRoot } from "./ShadowRoot.js";
+import { getInnerHTML, setInnerHTML } from "./html.js";
 
 export default (globalThis.Element ??= class Element extends Node {
 	#attrs = new Map();
 	#def = null;
+	#shadowRoot = null;
 
 	constructor (tag) {
 		super();
@@ -165,36 +141,51 @@ export default (globalThis.Element ??= class Element extends Node {
 		throw new Error(`matches(): unsupported selector "${sel}"`);
 	}
 
-	// Verified in Chromium: new children connect first, old disconnect after
+	get innerHTML () {
+		return getInnerHTML(this);
+	}
+
 	set innerHTML (html) {
-		let frag = parseFragment(html);
-		let nodes = frag.childNodes.map(n => toNode(n));
+		setInnerHTML(this, html);
+	}
 
-		let old = [...this.childNodes];
-		let connected = this.isConnected;
+	setHTMLUnsafe (html) {
+		setInnerHTML(this, html, { shadowRoots: true });
+	}
 
-		for (let child of nodes) {
-			child.parentNode = this;
-			this.childNodes.push(child);
-			if (connected) {
-				state.onConnect(child);
-			}
+	get shadowRoot () {
+		return this.#shadowRoot?.mode === "open" ? this.#shadowRoot : null;
+	}
+
+	// DOM spec, "attach a shadow root". Verified in Chromium, Gecko and WebKit.
+	attachShadow (init) {
+		let mode = init?.mode;
+		if (mode !== "open" && mode !== "closed") {
+			throw new TypeError(`attachShadow(): "${mode}" is not a valid mode`);
 		}
 
-		for (let child of old) {
-			let i = this.childNodes.indexOf(child);
-			if (i !== -1) {
-				this.childNodes.splice(i, 1);
-			}
-			child.parentNode = null;
-			if (connected) {
-				state.onDisconnect(child);
-			}
+		let root = this.#shadowRoot;
+		if (!root) {
+			return (this.#shadowRoot = new ShadowRoot(this, mode));
 		}
+
+		// Only a declarative root of the same mode is reused, and only once
+		if (!root._declarative || root.mode !== mode) {
+			throw new DOMException("The element already has a shadow root", "NotSupportedError");
+		}
+
+		root.textContent = "";
+		root._declarative = false;
+		return root;
 	}
 
 	static _setDef (el, def) {
 		el.#def = def;
+	}
+
+	// For walk(), which enters closed roots too
+	static _getShadowRoot (node) {
+		return #shadowRoot in node ? node.#shadowRoot : null;
 	}
 });
 

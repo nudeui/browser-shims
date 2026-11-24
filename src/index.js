@@ -1,5 +1,6 @@
 export { Text } from "./Text.js";
 export { Node } from "./Node.js";
+export { ShadowRoot } from "./ShadowRoot.js";
 export { Element } from "./Element.js";
 export { HTMLElement } from "./HTMLElement.js";
 export { MutationObserver } from "./MutationObserver.js";

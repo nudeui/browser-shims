@@ -10,6 +10,7 @@
 		".": "./src/index.js",
 		"./Text": "./src/Text.js",
 		"./Node": "./src/Node.js",
+		"./ShadowRoot": "./src/ShadowRoot.js",
 		"./Element": "./src/Element.js",
 		"./HTMLElement": "./src/HTMLElement.js",
 		"./MutationObserver": "./src/MutationObserver.js",

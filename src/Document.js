@@ -4,7 +4,7 @@ import { Node } from "./Node.js";
 import { Element } from "./Element.js";
 import { HTMLElement } from "./HTMLElement.js";
 
-export default globalThis.Document ??= class Document extends Node {
+export default (globalThis.Document ??= class Document extends Node {
 	nodeType = 9;
 
 	constructor () {
@@ -38,7 +38,7 @@ export default globalThis.Document ??= class Document extends Node {
 		frag.nodeType = 11;
 		return frag;
 	}
-};
+});
 
 if (!globalThis.document) {
 	state.doc = new globalThis.Document();

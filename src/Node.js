@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import { Text } from "./Text.js";
 
-export default globalThis.Node ??= class Node extends EventTarget {
+export default (globalThis.Node ??= class Node extends EventTarget {
 	nodeType = 1;
 	parentNode = null;
 	_children = [];
@@ -90,6 +90,6 @@ export default globalThis.Node ??= class Node extends EventTarget {
 			state.onDisconnect(this);
 		}
 	}
-};
+});
 
 export let { Node } = globalThis;

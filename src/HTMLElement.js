@@ -1,7 +1,7 @@
 import { state } from "./state.js";
 import { Element } from "./Element.js";
 
-export default globalThis.HTMLElement ??= class HTMLElement extends Element {
+export default (globalThis.HTMLElement ??= class HTMLElement extends Element {
 	static _tag = null;
 	static _def = null;
 
@@ -21,6 +21,6 @@ export default globalThis.HTMLElement ??= class HTMLElement extends Element {
 	attachShadow (opts = {}) {
 		return { mode: opts.mode, adoptedStyleSheets: [] };
 	}
-};
+});
 
 export let { HTMLElement } = globalThis;

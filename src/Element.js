@@ -27,7 +27,7 @@ function toNode (ast) {
 	return el;
 }
 
-export default globalThis.Element ??= class Element extends Node {
+export default (globalThis.Element ??= class Element extends Node {
 	#attrs = new Map();
 	#def = null;
 
@@ -196,6 +196,6 @@ export default globalThis.Element ??= class Element extends Node {
 	static _setDef (el, def) {
 		el.#def = def;
 	}
-};
+});
 
 export let { Element } = globalThis;

@@ -5,6 +5,7 @@ import { queueRecord } from "./MutationObserver.js";
 
 export default (globalThis.Node ??= class Node extends EventTarget {
 	static ELEMENT_NODE = 1;
+	static DOCUMENT_NODE = 9;
 
 	nodeType = 1;
 	parentNode = null;
@@ -39,6 +40,16 @@ export default (globalThis.Node ??= class Node extends EventTarget {
 			// Not this.append(), which a component may override
 			Node.prototype.append.call(this, String(val));
 		}
+	}
+
+	// FIXME: `{ composed: true }` is ignored, so a node in a shadow tree gets its shadow root, where native goes on through the host.
+	getRootNode () {
+		let node = this;
+		while (node.parentNode) {
+			node = node.parentNode;
+		}
+
+		return node;
 	}
 
 	appendChild (child) {

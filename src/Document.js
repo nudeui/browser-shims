@@ -3,6 +3,7 @@ import { walk } from "./util.js";
 import { Node } from "./Node.js";
 import { Element } from "./Element.js";
 import { HTMLElement } from "./HTMLElement.js";
+import { HTMLSlotElement } from "./HTMLSlotElement.js";
 
 export default (globalThis.Document ??= class Document extends Node {
 	nodeType = 9;
@@ -30,7 +31,10 @@ export default (globalThis.Document ??= class Document extends Node {
 			return el;
 		}
 
-		// FIXME: createElement("slot") gives a plain HTMLElement, with no assignedNodes() or assign().
+		if (tag === "slot") {
+			return new HTMLSlotElement();
+		}
+
 		return new HTMLElement(tag);
 	}
 

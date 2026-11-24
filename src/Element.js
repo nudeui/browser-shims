@@ -57,7 +57,7 @@ export default (globalThis.Element ??= class Element extends Node {
 	setAttribute (name, val) {
 		let old = this.#attrs.get(name) ?? null;
 		this.#attrs.set(name, String(val));
-		this.#attributeChanged(name);
+		this.#attributeChanged(name, old);
 
 		if (this.#def?.observedAttrs?.includes(name) && this.attributeChangedCallback) {
 			this.attributeChangedCallback(name, old, String(val));
@@ -71,15 +71,15 @@ export default (globalThis.Element ??= class Element extends Node {
 		}
 
 		this.#attrs.delete(name);
-		this.#attributeChanged(name);
+		this.#attributeChanged(name, old);
 
 		if (this.#def?.observedAttrs?.includes(name) && this.attributeChangedCallback) {
 			this.attributeChangedCallback(name, old, null);
 		}
 	}
 
-	#attributeChanged (name) {
-		queueRecord("attributes", this, { attributeName: name });
+	#attributeChanged (name, oldValue) {
+		queueRecord("attributes", this, { attributeName: name, oldValue });
 
 		// `slot` picks a node's slot, and `name` names a slot
 		if (name === "slot" || name === "name") {

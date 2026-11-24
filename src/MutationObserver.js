@@ -1,7 +1,6 @@
 // NOTE: A patch, not the full DOM spec. It delivers childList and attributes records, in a microtask after the change.
 // TODO: Records carry only type, target, attributeName, addedNodes, removedNodes and oldValue.
-// TODO: oldValue is always null.
-// TODO: characterData, attributeOldValue and the attributeFilter-implies-attributes rule are not supported.
+// TODO: characterData, and the rule that attributeOldValue or attributeFilter implies attributes, are not supported.
 // TODO: Nodes removed from an observed subtree are not followed.
 // FIXME: Setting textContent gives one record per removed or added node, where native gives one record for all of them.
 // FIXME: slotchange may fire before observer callbacks, where native fires it after them.
@@ -14,10 +13,14 @@ let registrations = new WeakMap();
  * Queue a record for every observer of the target or, with `subtree`, of an ancestor
  * @param {"childList" | "attributes"} type
  * @param {Node} target
- * @param {{ attributeName?: string, addedNodes?: Node[], removedNodes?: Node[] }} change
+ * @param {{ attributeName?: string, oldValue?: string | null, addedNodes?: Node[], removedNodes?: Node[] }} change
  */
-export function queueRecord (type, target, { attributeName, addedNodes = [], removedNodes = [] }) {
-	let interested = new Set();
+export function queueRecord (
+	type,
+	target,
+	{ attributeName, oldValue = null, addedNodes = [], removedNodes = [] },
+) {
+	let interested = new Map();
 
 	for (let node = target; node; node = node.parentNode) {
 		for (let [observer, options] of registrations.get(node) ?? []) {
@@ -26,12 +29,16 @@ export function queueRecord (type, target, { attributeName, addedNodes = [], rem
 				options[type] &&
 				(type === "childList" || options.attributeFilter?.includes(attributeName) !== false)
 			) {
-				interested.add(observer);
+				// The record gets oldValue when any matching registration asks for it, as natively
+				interested.set(
+					observer,
+					options.attributeOldValue ? oldValue : (interested.get(observer) ?? null),
+				);
 			}
 		}
 	}
 
-	for (let observer of interested) {
+	for (let [observer, old] of interested) {
 		if (!observer._records.length) {
 			queueMicrotask(() => {
 				let records = observer._records;
@@ -48,7 +55,7 @@ export function queueRecord (type, target, { attributeName, addedNodes = [], rem
 			attributeName: attributeName ?? null,
 			addedNodes,
 			removedNodes,
-			oldValue: null,
+			oldValue: old,
 		});
 	}
 }

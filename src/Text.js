@@ -1,6 +1,7 @@
 import { findSlot, updateSlots } from "./slots.js";
 import { queueRecord } from "./MutationObserver.js";
 
+// TODO: Text has no getRootNode(), because it does not extend Node, so the call throws.
 export default (globalThis.Text ??= class Text {
 	nodeType = 3;
 	parentNode = null;

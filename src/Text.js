@@ -1,4 +1,4 @@
-export default globalThis.Text ??= class Text {
+export default (globalThis.Text ??= class Text {
 	nodeType = 3;
 	parentNode = null;
 
@@ -30,6 +30,6 @@ export default globalThis.Text ??= class Text {
 		}
 		this.parentNode = null;
 	}
-};
+});
 
 export let { Text } = globalThis;

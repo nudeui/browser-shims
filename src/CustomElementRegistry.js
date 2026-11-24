@@ -27,7 +27,7 @@ function upgrade (el, def) {
 	}
 }
 
-export default globalThis.CustomElementRegistry ??= class CustomElementRegistry {
+export default (globalThis.CustomElementRegistry ??= class CustomElementRegistry {
 	#defs = new Map();
 	#pending = new Map();
 
@@ -85,7 +85,7 @@ export default globalThis.CustomElementRegistry ??= class CustomElementRegistry 
 			this.#pending.get(name).push(resolve);
 		});
 	}
-};
+});
 
 globalThis.customElements ??= new globalThis.CustomElementRegistry();
 

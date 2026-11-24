@@ -30,6 +30,7 @@ export default (globalThis.Document ??= class Document extends Node {
 			return el;
 		}
 
+		// FIXME: createElement("slot") gives a plain HTMLElement, with no assignedNodes() or assign().
 		return new HTMLElement(tag);
 	}
 

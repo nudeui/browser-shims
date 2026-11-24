@@ -3,6 +3,7 @@ export { Node } from "./Node.js";
 export { ShadowRoot } from "./ShadowRoot.js";
 export { Element } from "./Element.js";
 export { HTMLElement } from "./HTMLElement.js";
+export { HTMLSlotElement } from "./HTMLSlotElement.js";
 export { MutationObserver } from "./MutationObserver.js";
 export { CSSStyleSheet } from "./CSSStyleSheet.js";
 export { CustomElementRegistry, customElements } from "./CustomElementRegistry.js";

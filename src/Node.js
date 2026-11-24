@@ -1,7 +1,11 @@
 import { state } from "./state.js";
 import { Text } from "./Text.js";
+import { updateSlots } from "./slots.js";
+import { queueRecord } from "./MutationObserver.js";
 
 export default (globalThis.Node ??= class Node extends EventTarget {
+	static ELEMENT_NODE = 1;
+
 	nodeType = 1;
 	parentNode = null;
 	_children = [];
@@ -43,11 +47,9 @@ export default (globalThis.Node ??= class Node extends EventTarget {
 	}
 
 	append (...nodes) {
-		for (let child of nodes) {
-			if (typeof child === "string") {
-				child = new Text(child);
-			}
+		nodes = nodes.map(child => (typeof child === "string" ? new Text(child) : child));
 
+		for (let child of nodes) {
 			if (child.parentNode) {
 				let was = child.parentNode.isConnected ?? false;
 				let arr = child.parentNode.childNodes;
@@ -55,7 +57,10 @@ export default (globalThis.Node ??= class Node extends EventTarget {
 				if (i !== -1) {
 					arr.splice(i, 1);
 				}
+				let old = child.parentNode;
 				child.parentNode = null;
+				queueRecord("childList", old, { removedNodes: [child] });
+				updateSlots(old);
 				if (was) {
 					state.onDisconnect(child);
 				}
@@ -68,6 +73,12 @@ export default (globalThis.Node ??= class Node extends EventTarget {
 				state.onConnect(child);
 			}
 		}
+
+		// One record for all the nodes, as native append() inserts them as one fragment
+		if (nodes.length) {
+			queueRecord("childList", this, { addedNodes: nodes });
+			updateSlots(this);
+		}
 	}
 
 	remove () {
@@ -76,16 +87,38 @@ export default (globalThis.Node ??= class Node extends EventTarget {
 		}
 
 		let was = this.isConnected;
-		let arr = this.parentNode.childNodes;
+		let parent = this.parentNode;
+		let arr = parent.childNodes;
 		let i = arr.indexOf(this);
 		if (i !== -1) {
 			arr.splice(i, 1);
 		}
 		this.parentNode = null;
+		queueRecord("childList", parent, { removedNodes: [this] });
+		updateSlots(parent);
 
 		if (was) {
 			state.onDisconnect(this);
 		}
+	}
+
+	// Descendants in tree order. A nested shadow root is not a child, so it stays out.
+	// NOTE: Each comma-separated part is a compound selector for matches(), optionally after `:scope >`, and no other combinator is supported.
+	querySelectorAll (sel) {
+		let parts = sel.split(",").map(part => part.trim().match(/^(:scope\s*>\s*)?(.+)$/));
+		let descendants = nodes =>
+			nodes
+				.filter(node => node.nodeType === 1)
+				.flatMap(el => [el, ...descendants(el.childNodes)]);
+
+		return descendants(this.childNodes).filter(el =>
+			parts.some(
+				([, child, compound]) => (!child || el.parentNode === this) && el.matches(compound),
+			));
+	}
+
+	querySelector (sel) {
+		return this.querySelectorAll(sel)[0] ?? null;
 	}
 });
 

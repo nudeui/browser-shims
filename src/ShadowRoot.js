@@ -7,10 +7,11 @@ export default (globalThis.ShadowRoot ??= class ShadowRoot extends Node {
 	// True for a root parsed from <template shadowrootmode>, until attachShadow() reuses it
 	_declarative = false;
 
-	constructor (host, mode) {
+	constructor (host, mode, slotAssignment) {
 		super();
 		this.host = host;
 		this.mode = mode;
+		this.slotAssignment = slotAssignment;
 	}
 
 	get isConnected () {

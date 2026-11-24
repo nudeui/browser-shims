@@ -1,6 +1,8 @@
 import { state } from "./state.js";
 import { walk } from "./util.js";
 import { Element } from "./Element.js";
+// The parser builds slots with globalThis.HTMLSlotElement, which html.js cannot import without a load cycle
+import "./HTMLSlotElement.js";
 
 function upgrade (el, def) {
 	Object.setPrototypeOf(el, def.Cls.prototype);

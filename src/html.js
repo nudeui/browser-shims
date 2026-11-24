@@ -1,5 +1,7 @@
 import { state } from "./state.js";
 import { Text } from "./Text.js";
+import { updateSlots } from "./slots.js";
+import { queueRecord } from "./MutationObserver.js";
 
 let parseFragment, serialize, defaultTreeAdapter;
 if (!globalThis.Element) {
@@ -31,7 +33,10 @@ function toNode (ast, shadowRoots) {
 	}
 
 	// Parsed elements start undefined. setInnerHTML() upgrades them, so a constructor sees the whole tree.
-	let el = new globalThis.HTMLElement(ast.tagName);
+	let el =
+		ast.tagName === "slot"
+			? new globalThis.HTMLSlotElement()
+			: new globalThis.HTMLElement(ast.tagName);
 
 	for (let attr of ast.attrs ?? []) {
 		el.setAttribute(attr.name, attr.value);
@@ -82,6 +87,12 @@ export function setInnerHTML (node, html, { shadowRoots = false } = {}) {
 	for (let child of nodes) {
 		child.parentNode = node;
 	}
+
+	if (old.length || nodes.length) {
+		queueRecord("childList", node, { addedNodes: nodes, removedNodes: old });
+	}
+
+	updateSlots(node);
 
 	// New elements upgrade and connect before the old ones disconnect, as in Chromium and WebKit.
 	// Gecko disconnects first.

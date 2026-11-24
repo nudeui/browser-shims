@@ -1,6 +1,8 @@
 import { Node } from "./Node.js";
 import { ShadowRoot } from "./ShadowRoot.js";
 import { getInnerHTML, setInnerHTML } from "./html.js";
+import { findSlot, updateSlots } from "./slots.js";
+import { queueRecord } from "./MutationObserver.js";
 
 export default (globalThis.Element ??= class Element extends Node {
 	#attrs = new Map();
@@ -55,6 +57,7 @@ export default (globalThis.Element ??= class Element extends Node {
 	setAttribute (name, val) {
 		let old = this.#attrs.get(name) ?? null;
 		this.#attrs.set(name, String(val));
+		this.#attributeChanged(name, old);
 
 		if (this.#def?.observedAttrs?.includes(name) && this.attributeChangedCallback) {
 			this.attributeChangedCallback(name, old, String(val));
@@ -68,14 +71,34 @@ export default (globalThis.Element ??= class Element extends Node {
 		}
 
 		this.#attrs.delete(name);
+		this.#attributeChanged(name, old);
 
 		if (this.#def?.observedAttrs?.includes(name) && this.attributeChangedCallback) {
 			this.attributeChangedCallback(name, old, null);
 		}
 	}
 
+	#attributeChanged (name, oldValue) {
+		queueRecord("attributes", this, { attributeName: name, oldValue });
+
+		// `slot` picks a node's slot, and `name` names a slot
+		if (name === "slot" || name === "name") {
+			updateSlots(this.parentNode ?? this);
+		}
+	}
+
 	hasAttribute (name) {
 		return this.#attrs.has(name);
+	}
+
+	// FIXME: Writes through dataset are silently lost.
+	// FIXME: camelCase keys are not converted to dashed names, so dataset.fooBar reads data-fooBar.
+	get dataset () {
+		return new Proxy({}, { get: (_, key) => this.getAttribute(`data-${key}`) ?? undefined });
+	}
+
+	get assignedSlot () {
+		return findSlot(this, { open: true });
 	}
 
 	get children () {
@@ -107,13 +130,14 @@ export default (globalThis.Element ??= class Element extends Node {
 				s.delete(cls);
 				el.#setClasses(s);
 			},
-			toggle (cls) {
+			// TODO: toggle() returns nothing, where native returns whether the class is now present.
+			toggle (cls, force = !el.#classSet().has(cls)) {
 				let s = el.#classSet();
-				if (s.has(cls)) {
-					s.delete(cls);
+				if (force) {
+					s.add(cls);
 				}
 				else {
-					s.add(cls);
+					s.delete(cls);
 				}
 				el.#setClasses(s);
 			},
@@ -123,22 +147,30 @@ export default (globalThis.Element ??= class Element extends Node {
 		};
 	}
 
+	// NOTE: Only a compound selector of an optional tag and any of `[attr]`, `[attr="value"]`, `:not([attr])` and `:not([attr="value"])` is supported, and other forms throw.
 	matches (sel) {
-		if (/^[a-z][\w-]*$/i.test(sel)) {
-			return this.localName === sel.toLowerCase();
+		let [, tag, rest] =
+			sel.match(
+				/^([a-z][\w-]*)?((?::not\(\[[^\]=]+(?:="[^"]*")?\]\)|\[[^\]=]+(?:="[^"]*")?\])*)$/i,
+			) ?? [];
+
+		if (!sel || rest === undefined) {
+			throw new Error(`matches(): unsupported selector "${sel}"`);
 		}
 
-		let m = sel.match(/^\[([^\]=]+)\]$/);
-		if (m) {
-			return this.hasAttribute(m[1]);
+		if (tag && this.localName !== tag.toLowerCase()) {
+			return false;
 		}
 
-		m = sel.match(/^\[([^\]=]+)="([^"]*)"\]$/);
-		if (m) {
-			return this.getAttribute(m[1]) === m[2];
+		for (let [, not, name, value] of rest.matchAll(/(:not\()?\[([^\]=]+)(?:="([^"]*)")?\]/g)) {
+			let found =
+				value === undefined ? this.hasAttribute(name) : this.getAttribute(name) === value;
+			if (found === Boolean(not)) {
+				return false;
+			}
 		}
 
-		throw new Error(`matches(): unsupported selector "${sel}"`);
+		return true;
 	}
 
 	get innerHTML () {
@@ -164,9 +196,12 @@ export default (globalThis.Element ??= class Element extends Node {
 			throw new TypeError(`attachShadow(): "${mode}" is not a valid mode`);
 		}
 
+		// FIXME: An invalid slotAssignment is accepted and acts as "named", where native throws a TypeError.
+		let slotAssignment = init.slotAssignment ?? "named";
+
 		let root = this.#shadowRoot;
 		if (!root) {
-			return (this.#shadowRoot = new ShadowRoot(this, mode));
+			return (this.#shadowRoot = new ShadowRoot(this, mode, slotAssignment));
 		}
 
 		// Only a declarative root of the same mode is reused, and only once
